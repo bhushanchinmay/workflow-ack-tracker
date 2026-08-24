@@ -18,7 +18,7 @@ Acknowledgements are stored as rows instead of a counter. This keeps the expecte
 
 ## Run locally
 
-Requirements: Java 17+, Docker Desktop, and Docker Compose.
+Requirements: Java 17+, Maven 3.9+ for host-side commands, Docker Desktop, and Docker Compose.
 
 Start the complete local stack:
 
