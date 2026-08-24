@@ -15,6 +15,15 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        acks: all
+        enable.idempotence: true
+        spring.json.add.type.headers: false
 
 workflow:
   acknowledgement-timeout: ${WORKFLOW_ACKNOWLEDGEMENT_TIMEOUT:PT15M}
@@ -22,6 +31,17 @@ workflow:
     enabled: ${WORKFLOW_SCHEDULER_ENABLED:true}
     fixed-delay-ms: ${WORKFLOW_SCHEDULER_FIXED_DELAY_MS:60000}
     batch-size: ${WORKFLOW_SCHEDULER_BATCH_SIZE:100}
+  outbox:
+    publisher:
+      enabled: ${WORKFLOW_OUTBOX_PUBLISHER_ENABLED:false}
+      topic: ${WORKFLOW_OUTBOX_TOPIC:workflow.lifecycle.v1}
+      fixed-delay-ms: ${WORKFLOW_OUTBOX_PUBLISHER_FIXED_DELAY_MS:1000}
+      batch-size: ${WORKFLOW_OUTBOX_PUBLISHER_BATCH_SIZE:50}
+      claim-lease: ${WORKFLOW_OUTBOX_CLAIM_LEASE:PT2M}
+      max-attempts: ${WORKFLOW_OUTBOX_MAX_ATTEMPTS:10}
+      initial-retry-delay: ${WORKFLOW_OUTBOX_INITIAL_RETRY_DELAY:PT5S}
+      max-retry-delay: ${WORKFLOW_OUTBOX_MAX_RETRY_DELAY:PT5M}
+      send-timeout: ${WORKFLOW_OUTBOX_SEND_TIMEOUT:PT10S}
 
 server:
   shutdown: graceful
