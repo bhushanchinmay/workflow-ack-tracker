@@ -6,7 +6,7 @@ A Spring Boot REST service for tracking asynchronous workflow events and the ack
 
 - Java 17 and Spring Boot 3.4.
 - PostgreSQL for durable state.
-- Spring Data JPA with Flyway migration `V1__create_workflow_tables.sql`.
+- Spring Data JPA with Flyway migrations `V1__create_workflow_tables.sql` and `V2__create_outbox_table.sql`.
 - `PENDING`, `COMPLETED`, and `FAILED` workflow states.
 - The acknowledgement timeout is configurable through `WORKFLOW_ACKNOWLEDGEMENT_TIMEOUT` and defaults to 15 minutes.
 - A scheduled checker is enabled by default and scans every 60 seconds. It marks overdue pending workflows as failed.
@@ -150,7 +150,7 @@ Common status codes are `201` for creation, `200` for successful reads and state
 
 ## Current implementation status
 
-The local implementation includes the required workflow APIs, PostgreSQL persistence, row-locked acknowledgement transitions, an overdue scheduler, Flyway migrations, a transactional outbox table, Actuator health and Prometheus endpoints, Docker Compose, and a Testcontainers integration test. JWT authentication, an outbox publisher, and RFC 9457 error responses are intentionally tracked as follow-up portfolio milestones rather than being hidden behind an incomplete claim.
+The local implementation includes the required workflow APIs, PostgreSQL persistence, row-locked acknowledgement transitions, an overdue scheduler, Flyway migrations, a transactional outbox table, Actuator health and Prometheus endpoint configuration, Docker Compose, and a Testcontainers integration test. The outbox currently records terminal events but does not publish them. JWT authentication, structured application metrics, an outbox publisher, and RFC 9457 error responses are tracked as follow-up portfolio milestones.
 
 ## Tests
 
@@ -167,5 +167,5 @@ Without Docker, the application can still be run against any PostgreSQL instance
 - `eventId` is an upstream idempotency key and is globally unique.
 - Each target service acknowledges at most once. Acknowledgement calls are not intended to carry a result payload in this version.
 - The scheduler marks overdue workflows as failed; alert delivery can be added after the state update, preferably through an outbox table so an alert is not lost.
-- For a high-volume deployment, `GET /api/v1/workflows/pending` should be paginated and the overdue scan should process batches with a lease or `SKIP LOCKED` strategy.
+- For a high-volume deployment, `GET /api/v1/workflows/pending` should be paginated and the overdue scan should process bounded batches with a lease or `SKIP LOCKED` strategy.
 - Authentication and authorization are intentionally outside this exercise. In production, upstream and downstream callers should use service identity and authorize which services may acknowledge which workflows.

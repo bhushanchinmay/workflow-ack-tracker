@@ -10,6 +10,7 @@
 - [x] Versioned OpenAPI contract
 - [ ] RFC 9457 error model
 - [ ] Authentication and service identity checks
-- [ ] Actuator metrics and structured logging
+- [x] Actuator health and Prometheus endpoint configuration
+- [ ] Structured logging and custom workflow metrics
 - [ ] Containerized local environment and CI quality gates
 - [ ] Concurrency, end-to-end, and load tests
