@@ -17,7 +17,7 @@ import java.util.UUID;
 import static com.example.workflowtracker.api.WorkflowDtos.*;
 
 @RestController
-@RequestMapping("/workflows")
+@RequestMapping("/api/v1/workflows")
 public class WorkflowController {
 
     private final WorkflowService workflowService;

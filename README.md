@@ -49,10 +49,10 @@ export WORKFLOW_SCHEDULER_FIXED_DELAY_MS=60000
 
 ### Create a workflow
 
-`POST /workflows`
+`POST /api/v1/workflows`
 
 ```bash
-curl -i -X POST http://localhost:8080/workflows \
+curl -i -X POST http://localhost:8080/api/v1/workflows \
   -H 'Content-Type: application/json' \
   -d '{
     "eventId": "order-1001-created",
@@ -65,10 +65,10 @@ The response has HTTP `201 Created` and contains a generated `workflowId`, an ac
 
 ### Acknowledge a workflow
 
-`POST /workflows/{workflowId}/acknowledge`
+`POST /api/v1/workflows/{workflowId}/acknowledge`
 
 ```bash
-curl -i -X POST http://localhost:8080/workflows/<workflow-id>/acknowledge \
+curl -i -X POST http://localhost:8080/api/v1/workflows/<workflow-id>/acknowledge \
   -H 'Content-Type: application/json' \
   -d '{"serviceName":"billing"}'
 ```
@@ -77,10 +77,10 @@ The service must be one of the expected target services. A duplicate acknowledge
 
 ### Get workflow state
 
-`GET /workflows/{workflowId}`
+`GET /api/v1/workflows/{workflowId}`
 
 ```bash
-curl -i http://localhost:8080/workflows/<workflow-id>
+curl -i http://localhost:8080/api/v1/workflows/<workflow-id>
 ```
 
 The response includes `acknowledgements`, `acknowledgedServices`, and `pendingServices`.
@@ -108,20 +108,20 @@ Example response shape:
 
 ### List pending workflows
 
-`GET /workflows/pending`
+`GET /api/v1/workflows/pending`
 
 ```bash
-curl -i http://localhost:8080/workflows/pending
+curl -i http://localhost:8080/api/v1/workflows/pending
 ```
 
 This returns workflows with status `PENDING`, including their missing services. Overdue workflows remain visible until the scheduler or the failure endpoint marks them as failed.
 
 ### Mark an overdue workflow as failed
 
-`POST /workflows/{workflowId}/failed`
+`POST /api/v1/workflows/{workflowId}/failed`
 
 ```bash
-curl -i -X POST http://localhost:8080/workflows/<workflow-id>/failed \
+curl -i -X POST http://localhost:8080/api/v1/workflows/<workflow-id>/failed \
   -H 'Content-Type: application/json' \
   -d '{"reason":"shipping acknowledgement did not arrive"}'
 ```
@@ -138,7 +138,7 @@ Errors use a consistent JSON shape:
   "status": 409,
   "error": "INVALID_WORKFLOW_STATE",
   "message": "duplicate acknowledgement from service: billing",
-  "path": "/workflows/9b2c0a89-3d5c-49c6-9c35-1c2d1c98cb72/acknowledge"
+  "path": "/api/v1/workflows/9b2c0a89-3d5c-49c6-9c35-1c2d1c98cb72/acknowledge"
 }
 ```
 
@@ -163,5 +163,5 @@ Without Docker, the application can still be run against any PostgreSQL instance
 - `eventId` is an upstream idempotency key and is globally unique.
 - Each target service acknowledges at most once. Acknowledgement calls are not intended to carry a result payload in this version.
 - The scheduler marks overdue workflows as failed; alert delivery can be added after the state update, preferably through an outbox table so an alert is not lost.
-- For a high-volume deployment, `GET /workflows/pending` should be paginated and the overdue scan should process batches with a lease or `SKIP LOCKED` strategy.
+- For a high-volume deployment, `GET /api/v1/workflows/pending` should be paginated and the overdue scan should process batches with a lease or `SKIP LOCKED` strategy.
 - Authentication and authorization are intentionally outside this exercise. In production, upstream and downstream callers should use service identity and authorize which services may acknowledge which workflows.
