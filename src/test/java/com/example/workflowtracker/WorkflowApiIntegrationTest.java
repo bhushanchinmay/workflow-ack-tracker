@@ -42,7 +42,7 @@ class WorkflowApiIntegrationTest {
 
     @Test
     void tracksAcknowledgementsAndRejectsDuplicateAcknowledgement() throws Exception {
-        String response = mockMvc.perform(post("/workflows")
+        String response = mockMvc.perform(post("/api/v1/workflows")
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
@@ -58,27 +58,27 @@ class WorkflowApiIntegrationTest {
 
         String workflowId = com.jayway.jsonpath.JsonPath.read(response, "$.workflowId");
 
-        mockMvc.perform(post("/workflows/{id}/acknowledge", workflowId)
+        mockMvc.perform(post("/api/v1/workflows/{id}/acknowledge", workflowId)
                         .contentType(APPLICATION_JSON)
                         .content("{\"serviceName\":\"billing\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.acknowledgedServices[0]").value("billing"))
                 .andExpect(jsonPath("$.pendingServices[0]").value("shipping"));
 
-        mockMvc.perform(post("/workflows/{id}/acknowledge", workflowId)
+        mockMvc.perform(post("/api/v1/workflows/{id}/acknowledge", workflowId)
                         .contentType(APPLICATION_JSON)
                         .content("{\"serviceName\":\"billing\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("INVALID_WORKFLOW_STATE"));
 
-        mockMvc.perform(get("/workflows/{id}", workflowId))
+        mockMvc.perform(get("/api/v1/workflows/{id}", workflowId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
     @Test
     void rejectsAcknowledgementForUnknownWorkflow() throws Exception {
-        mockMvc.perform(post("/workflows/{id}/acknowledge",
+        mockMvc.perform(post("/api/v1/workflows/{id}/acknowledge",
                         "00000000-0000-0000-0000-000000000000")
                         .contentType(APPLICATION_JSON)
                         .content("{\"serviceName\":\"billing\"}"))
