@@ -15,6 +15,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -59,9 +60,11 @@ class WorkflowApiIntegrationTest {
         String workflowId = com.jayway.jsonpath.JsonPath.read(response, "$.workflowId");
 
         mockMvc.perform(post("/api/v1/workflows/{id}/acknowledge", workflowId)
+                        .header("X-Request-Id", "client-ack-1001")
                         .contentType(APPLICATION_JSON)
                         .content("{\"serviceName\":\" billing \"}"))
                 .andExpect(status().isOk())
+                .andExpect(header().string("X-Request-Id", "client-ack-1001"))
                 .andExpect(jsonPath("$.acknowledgedServices[0]").value("billing"))
                 .andExpect(jsonPath("$.pendingServices[0]").value("shipping"));
 
@@ -69,7 +72,8 @@ class WorkflowApiIntegrationTest {
                         .contentType(APPLICATION_JSON)
                         .content("{\"serviceName\":\"billing\"}"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error").value("INVALID_WORKFLOW_STATE"));
+                .andExpect(jsonPath("$.error").value("INVALID_WORKFLOW_STATE"))
+                .andExpect(jsonPath("$.requestId").isNotEmpty());
 
         mockMvc.perform(get("/api/v1/workflows/{id}", workflowId))
                 .andExpect(status().isOk())

@@ -3,6 +3,8 @@ package com.example.workflowtracker.api;
 import com.example.workflowtracker.exception.WorkflowExceptions.WorkflowConflictException;
 import com.example.workflowtracker.exception.WorkflowExceptions.WorkflowNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -18,6 +20,8 @@ import static com.example.workflowtracker.api.WorkflowDtos.ErrorResponse;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
     @ExceptionHandler(WorkflowNotFoundException.class)
     public org.springframework.http.ResponseEntity<ErrorResponse> notFound(
@@ -61,6 +65,8 @@ public class ApiExceptionHandler {
     @ExceptionHandler(Exception.class)
     public org.springframework.http.ResponseEntity<ErrorResponse> unexpected(
             Exception ex, HttpServletRequest request) {
+        log.error("Unexpected error while processing requestId={} path={}",
+                requestId(request), request.getRequestURI(), ex);
         return error(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR",
                 "The server could not process the request", request);
     }
@@ -68,6 +74,12 @@ public class ApiExceptionHandler {
     private org.springframework.http.ResponseEntity<ErrorResponse> error(
             HttpStatus status, String error, String message, HttpServletRequest request) {
         return org.springframework.http.ResponseEntity.status(status)
-                .body(new ErrorResponse(Instant.now(), status.value(), error, message, request.getRequestURI()));
+                .body(new ErrorResponse(Instant.now(), status.value(), error, message,
+                        request.getRequestURI(), requestId(request)));
+    }
+
+    private String requestId(HttpServletRequest request) {
+        Object requestId = request.getAttribute(RequestIdFilter.REQUEST_ID_ATTRIBUTE);
+        return requestId == null ? null : requestId.toString();
     }
 }

@@ -11,6 +11,6 @@
 - [ ] RFC 9457 error model
 - [ ] Authentication and service identity checks
 - [x] Actuator health and Prometheus endpoint configuration
-- [ ] Structured logging and custom workflow metrics
+- [x] Request-correlated structured logging and custom workflow metrics
 - [ ] Containerized local environment and CI quality gates
 - [ ] Concurrency, end-to-end, and load tests

@@ -46,5 +46,6 @@ public final class WorkflowDtos {
             int status,
             String error,
             String message,
-            String path) { }
+            String path,
+            String requestId) { }
 }

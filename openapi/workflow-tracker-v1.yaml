@@ -201,6 +201,9 @@ components:
           type: string
         path:
           type: string
+        requestId:
+          type: string
+          nullable: true
   responses:
     BadRequest:
       description: Invalid request

@@ -10,6 +10,8 @@ A Spring Boot REST service for tracking asynchronous workflow events and the ack
 - `PENDING`, `COMPLETED`, and `FAILED` workflow states.
 - The acknowledgement timeout is configurable through `WORKFLOW_ACKNOWLEDGEMENT_TIMEOUT` and defaults to 15 minutes.
 - A scheduled checker is enabled by default and scans every 60 seconds. It marks overdue pending workflows as failed.
+- Every response includes an `X-Request-Id` response header. Error responses also include the request ID, and unexpected server errors log it for troubleshooting.
+- Workflow counters are exposed through the Prometheus endpoint: created, accepted acknowledgements, completed, failed, and rejected acknowledgements.
 
 Acknowledgements are stored as rows instead of a counter. This keeps the expected service list and the current acknowledgement state queryable. The acknowledgement and failure operations lock the workflow row in a transaction, so they cannot both change the same workflow at the same time. A unique database constraint also protects against duplicate acknowledgement rows if two requests race.
 
@@ -138,11 +140,14 @@ Errors use a consistent JSON shape:
   "status": 409,
   "error": "INVALID_WORKFLOW_STATE",
   "message": "duplicate acknowledgement from service: billing",
-  "path": "/api/v1/workflows/9b2c0a89-3d5c-49c6-9c35-1c2d1c98cb72/acknowledge"
+  "path": "/api/v1/workflows/9b2c0a89-3d5c-49c6-9c35-1c2d1c98cb72/acknowledge",
+  "requestId": "f8d1f6e8-6a29-4e41-b5ac-bc32d42d2c66"
 }
 ```
 
 Common status codes are `201` for creation, `200` for successful reads and state changes, `400` for invalid input, `404` for an unknown workflow, and `409` for duplicate data or invalid state transitions.
+
+The `X-Request-Id` header can be supplied by an upstream caller when it matches the allowed `[A-Za-z0-9._-]` format and is at most 100 characters. Otherwise, the service generates a new UUID. The value is also placed in the application logging context.
 
 ## Database model
 
@@ -150,7 +155,7 @@ Common status codes are `201` for creation, `200` for successful reads and state
 
 ## Current implementation status
 
-The local implementation includes the required workflow APIs, PostgreSQL persistence, row-locked acknowledgement transitions, an overdue scheduler, Flyway migrations, a transactional outbox table, Actuator health and Prometheus endpoint configuration, Docker Compose, and a Testcontainers integration test. The outbox currently records terminal events but does not publish them. JWT authentication, structured application metrics, an outbox publisher, and RFC 9457 error responses are tracked as follow-up portfolio milestones.
+The local implementation includes the required workflow APIs, PostgreSQL persistence, row-locked acknowledgement transitions, an overdue scheduler, Flyway migrations, a transactional outbox table, Actuator health and Prometheus endpoint configuration, Docker Compose, a Testcontainers integration test, request correlation IDs, and workflow metrics. The outbox currently records terminal events but does not publish them. JWT authentication, an outbox publisher, and RFC 9457 error responses are tracked as follow-up portfolio milestones.
 
 ## Tests
 
