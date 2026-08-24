@@ -39,6 +39,8 @@ To run the complete stack with Docker:
 docker compose up --build
 ```
 
+The application container runs as a non-root user. PostgreSQL data is stored in the named `workflow-postgres-data` volume and survives container restarts. Remove that volume only when you intentionally want to delete local database data.
+
 Useful configuration values:
 
 ```bash

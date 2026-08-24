@@ -12,5 +12,6 @@
 - [ ] Authentication and service identity checks
 - [x] Actuator health and Prometheus endpoint configuration
 - [x] Request-correlated structured logging and custom workflow metrics
-- [ ] Containerized local environment and CI quality gates
+- [x] Containerized local environment
+- [ ] CI quality gates
 - [ ] Concurrency, end-to-end, and load tests
