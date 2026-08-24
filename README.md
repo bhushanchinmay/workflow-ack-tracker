@@ -6,40 +6,42 @@ A Spring Boot REST service for tracking asynchronous workflow events and the ack
 
 - Java 17 and Spring Boot 3.4.
 - PostgreSQL for durable state.
-- Spring Data JPA with Flyway migrations `V1__create_workflow_tables.sql` and `V2__create_outbox_table.sql`.
+- Spring Data JPA with Flyway migrations for workflow state and outbox claim state.
 - `PENDING`, `COMPLETED`, and `FAILED` workflow states.
 - The acknowledgement timeout is configurable through `WORKFLOW_ACKNOWLEDGEMENT_TIMEOUT` and defaults to 15 minutes.
 - A scheduled checker is enabled by default and scans every 60 seconds. It marks overdue pending workflows as failed.
 - Every response includes an `X-Request-Id` response header. Error responses also include the request ID, and unexpected server errors log it for troubleshooting.
 - Workflow counters are exposed through the Prometheus endpoint: created, accepted acknowledgements, completed, failed, and rejected acknowledgements.
+- Terminal workflow events are written to the transactional outbox and published to Kafka when the outbox publisher is enabled.
 
 Acknowledgements are stored as rows instead of a counter. This keeps the expected service list and the current acknowledgement state queryable. The acknowledgement and failure operations lock the workflow row in a transaction, so they cannot both change the same workflow at the same time. A unique database constraint also protects against duplicate acknowledgement rows if two requests race.
 
 ## Run locally
 
-Requirements: Java 17+, Maven 3.9+, and PostgreSQL 14+.
+Requirements: Java 17+, Docker Desktop, and Docker Compose.
 
-Start PostgreSQL:
-
-```bash
-docker compose up -d postgres
-```
-
-Run the application:
-
-```bash
-mvn spring-boot:run
-```
-
-The API is available at `http://localhost:8080`.
-
-To run the complete stack with Docker:
+Start the complete local stack:
 
 ```bash
 docker compose up --build
 ```
 
-The application container runs as a non-root user. PostgreSQL data is stored in the named `workflow-postgres-data` volume and survives container restarts. Remove that volume only when you intentionally want to delete local database data.
+The application is available at `http://localhost:8080`. PostgreSQL is available on port `5432`, and Kafka is available to host processes on `localhost:9094`. The application container uses `kafka:9092` internally.
+
+To run the application locally against PostgreSQL without Kafka publishing:
+
+```bash
+docker compose up -d postgres
+WORKFLOW_OUTBOX_PUBLISHER_ENABLED=false mvn spring-boot:run
+```
+
+To stop the stack:
+
+```bash
+docker compose down
+```
+
+The application container runs as a non-root user. PostgreSQL and Kafka data are stored in named volumes and survive container restarts. Remove those volumes only when you intentionally want to delete local data.
 
 Useful configuration values:
 
@@ -47,6 +49,8 @@ Useful configuration values:
 export WORKFLOW_ACKNOWLEDGEMENT_TIMEOUT=PT15M
 export WORKFLOW_SCHEDULER_ENABLED=true
 export WORKFLOW_SCHEDULER_FIXED_DELAY_MS=60000
+export WORKFLOW_OUTBOX_PUBLISHER_ENABLED=true
+export KAFKA_BOOTSTRAP_SERVERS=localhost:9094
 ```
 
 ## API
@@ -157,23 +161,31 @@ The `X-Request-Id` header can be supplied by an upstream caller when it matches 
 
 ## Current implementation status
 
-The local implementation includes the required workflow APIs, PostgreSQL persistence, row-locked acknowledgement transitions, an overdue scheduler, Flyway migrations, a transactional outbox table, Actuator health and Prometheus endpoint configuration, Docker Compose, a Testcontainers integration test, request correlation IDs, and workflow metrics. The outbox currently records terminal events but does not publish them. JWT authentication, an outbox publisher, and RFC 9457 error responses are tracked as follow-up portfolio milestones.
+The local implementation includes the required workflow APIs, PostgreSQL persistence, row-locked acknowledgement transitions, an overdue scheduler, Flyway migrations, a transactional outbox, a lease-based Kafka publisher with retry and dead-letter handling, Actuator health and Prometheus endpoint configuration, Docker Compose, PostgreSQL and Kafka Testcontainers integration tests, request correlation IDs, and workflow metrics. JWT authentication and RFC 9457 error responses remain follow-up portfolio milestones.
 
 ## Tests
 
-The integration test uses Testcontainers and requires Docker:
+Fast unit tests run without Docker:
 
 ```bash
 mvn test
 ```
 
-Without Docker, the application can still be run against any PostgreSQL instance using the datasource environment variables, but the Testcontainers integration test will not start.
+Infrastructure integration tests use PostgreSQL and Kafka Testcontainers and require Docker:
+
+```bash
+mvn verify -Pintegration
+```
+
+The integration profile is intentionally separate so a developer can run fast domain tests without starting infrastructure.
 
 ## Assumptions and possible extensions
 
 - `eventId` is an upstream idempotency key and is globally unique.
 - Each target service acknowledges at most once. Acknowledgement calls are not intended to carry a result payload in this version.
-- The scheduler marks overdue workflows as failed; alert delivery can be added after the state update, preferably through an outbox table so an alert is not lost.
+- The scheduler marks overdue workflows as failed; alert delivery can be added after the state update, preferably through the existing outbox so an alert is not lost.
+- Kafka delivery is at least once. A publisher crash after Kafka accepts a message but before the database update can cause a duplicate. Consumers must use the stable outbox event ID for idempotency.
+- The publisher claims bounded batches using database row locks and a lease. An expired lease allows another publisher instance to recover a crashed claim.
 - The scheduler processes at most `WORKFLOW_SCHEDULER_BATCH_SIZE` workflows per run, ordered by deadline and workflow ID. A larger deployment should add `SKIP LOCKED` or a lease so multiple scheduler instances can share work safely.
 - For a high-volume deployment, `GET /api/v1/workflows/pending` should be paginated and the overdue scan should process bounded batches with a lease or `SKIP LOCKED` strategy.
 - Authentication and authorization are intentionally outside this exercise. In production, upstream and downstream callers should use service identity and authorize which services may acknowledge which workflows.

@@ -7,11 +7,14 @@
 - [x] Pending and manual failure APIs
 - [x] Configurable overdue scheduler
 - [x] Transactional outbox for terminal events
+- [x] Versioned Kafka lifecycle event contract
+- [x] Lease-based outbox publisher with retry and dead-letter handling
 - [x] Versioned OpenAPI contract
 - [ ] RFC 9457 error model
 - [ ] Authentication and service identity checks
 - [x] Actuator health and Prometheus endpoint configuration
 - [x] Request-correlated structured logging and custom workflow metrics
 - [x] Containerized local environment
+- [x] PostgreSQL and Kafka integration tests
 - [ ] CI quality gates
 - [ ] Concurrency, end-to-end, and load tests
