@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: workflow-tracker
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/workflows}
+    username: ${SPRING_DATASOURCE_USERNAME:workflow}
+    password: ${SPRING_DATASOURCE_PASSWORD:workflow}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+
+workflow:
+  acknowledgement-timeout: ${WORKFLOW_ACKNOWLEDGEMENT_TIMEOUT:PT15M}
+  scheduler:
+    enabled: ${WORKFLOW_SCHEDULER_ENABLED:true}
+    fixed-delay-ms: ${WORKFLOW_SCHEDULER_FIXED_DELAY_MS:60000}
+
+server:
+  shutdown: graceful
