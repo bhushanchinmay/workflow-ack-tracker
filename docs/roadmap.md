@@ -6,8 +6,9 @@
 - [x] Downstream acknowledgement API
 - [x] Pending and manual failure APIs
 - [x] Configurable overdue scheduler
-- [ ] Transactional outbox for terminal events
-- [ ] RFC 9457 error model and OpenAPI contract
+- [x] Transactional outbox for terminal events
+- [x] Versioned OpenAPI contract
+- [ ] RFC 9457 error model
 - [ ] Authentication and service identity checks
 - [ ] Actuator metrics and structured logging
 - [ ] Containerized local environment and CI quality gates

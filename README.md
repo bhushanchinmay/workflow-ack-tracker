@@ -148,6 +148,10 @@ Common status codes are `201` for creation, `200` for successful reads and state
 
 `workflow_events` stores the event payload, state, timestamps, and deadline. `workflow_acknowledgements` stores the expected service names and their acknowledgement timestamps. The foreign key cascades acknowledgement rows when a workflow is deleted, although this API does not expose deletion.
 
+## Current implementation status
+
+The local implementation includes the required workflow APIs, PostgreSQL persistence, row-locked acknowledgement transitions, an overdue scheduler, Flyway migrations, a transactional outbox table, Actuator health and Prometheus endpoints, Docker Compose, and a Testcontainers integration test. JWT authentication, an outbox publisher, and RFC 9457 error responses are intentionally tracked as follow-up portfolio milestones rather than being hidden behind an incomplete claim.
+
 ## Tests
 
 The integration test uses Testcontainers and requires Docker:
