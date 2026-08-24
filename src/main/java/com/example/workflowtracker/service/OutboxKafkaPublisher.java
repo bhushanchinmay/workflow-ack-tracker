@@ -79,14 +79,7 @@ public class OutboxKafkaPublisher {
     }
 
     private void publishOne(OutboxClaim claim) {
-        WorkflowLifecycleEvent event = new WorkflowLifecycleEvent(
-                claim.id(),
-                claim.eventType(),
-                WorkflowLifecycleEvent.CURRENT_SCHEMA_VERSION,
-                claim.aggregateId(),
-                WorkflowLifecycleEvent.SOURCE,
-                claim.createdAt(),
-                claim.payload());
+        WorkflowLifecycleEvent event = WorkflowLifecycleEvent.from(claim);
         try {
             SendResult<String, WorkflowLifecycleEvent> result = kafkaTemplate
                     .send(topic, claim.aggregateId().toString(), event)
