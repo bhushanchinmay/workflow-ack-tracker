@@ -7,6 +7,8 @@ import com.example.workflowtracker.domain.WorkflowStatus;
 import com.example.workflowtracker.exception.WorkflowExceptions.WorkflowConflictException;
 import com.example.workflowtracker.exception.WorkflowExceptions.WorkflowNotFoundException;
 import com.example.workflowtracker.repository.WorkflowRepository;
+import com.example.workflowtracker.outbox.OutboxEvent;
+import com.example.workflowtracker.outbox.OutboxRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,15 +26,18 @@ import java.util.UUID;
 public class WorkflowService {
 
     private final WorkflowRepository workflowRepository;
+    private final OutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final Duration acknowledgementTimeout;
 
     public WorkflowService(WorkflowRepository workflowRepository,
+                           OutboxRepository outboxRepository,
                            ObjectMapper objectMapper,
                            Clock clock,
                            @Value("${workflow.acknowledgement-timeout:PT15M}") Duration acknowledgementTimeout) {
         this.workflowRepository = workflowRepository;
+        this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.acknowledgementTimeout = acknowledgementTimeout;
@@ -81,6 +86,9 @@ public class WorkflowService {
                     + request.serviceName());
         }
         workflow.markAcknowledged(request.serviceName(), clock.instant());
+        if (workflow.getStatus() == WorkflowStatus.COMPLETED) {
+            recordTerminalEvent(workflow, "WORKFLOW_COMPLETED");
+        }
         return toResponse(workflowRepository.save(workflow));
     }
 
@@ -113,6 +121,7 @@ public class WorkflowService {
         String reason = request == null || request.reason() == null || request.reason().isBlank()
                 ? "Acknowledgement deadline exceeded" : request.reason().trim();
         workflow.markFailed(reason, now);
+        recordTerminalEvent(workflow, "WORKFLOW_FAILED");
         return toResponse(workflowRepository.save(workflow));
     }
 
@@ -120,7 +129,10 @@ public class WorkflowService {
     public int failOverdue() {
         Instant now = clock.instant();
         List<Workflow> overdue = workflowRepository.findOverdueForUpdate(WorkflowStatus.PENDING, now);
-        overdue.forEach(workflow -> workflow.markFailed("Acknowledgement deadline exceeded", now));
+        overdue.forEach(workflow -> {
+            workflow.markFailed("Acknowledgement deadline exceeded", now);
+            recordTerminalEvent(workflow, "WORKFLOW_FAILED");
+        });
         workflowRepository.saveAll(overdue);
         return overdue.size();
     }
@@ -132,6 +144,15 @@ public class WorkflowService {
 
     private WorkflowNotFoundException notFound(UUID id) {
         return new WorkflowNotFoundException("workflow not found: " + id);
+    }
+
+    private void recordTerminalEvent(Workflow workflow, String eventType) {
+        JsonNode payload = objectMapper.createObjectNode()
+                .put("workflowId", workflow.getId().toString())
+                .put("eventId", workflow.getEventId())
+                .put("status", workflow.getStatus().name());
+        outboxRepository.save(new OutboxEvent(
+                workflow.getId(), eventType, payload, clock.instant()));
     }
 
     private WorkflowDtos.WorkflowResponse toResponse(Workflow workflow) {
