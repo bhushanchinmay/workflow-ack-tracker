@@ -60,7 +60,7 @@ class WorkflowApiIntegrationTest {
 
         mockMvc.perform(post("/api/v1/workflows/{id}/acknowledge", workflowId)
                         .contentType(APPLICATION_JSON)
-                        .content("{\"serviceName\":\"billing\"}"))
+                        .content("{\"serviceName\":\" billing \"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.acknowledgedServices[0]").value("billing"))
                 .andExpect(jsonPath("$.pendingServices[0]").value("shipping"));
@@ -84,5 +84,20 @@ class WorkflowApiIntegrationTest {
                         .content("{\"serviceName\":\"billing\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("WORKFLOW_NOT_FOUND"));
+    }
+
+    @Test
+    void rejectsTargetServicesThatOnlyDifferByWhitespace() throws Exception {
+        mockMvc.perform(post("/api/v1/workflows")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "eventId": "order-whitespace-1001",
+                                  "payload": {},
+                                  "targetServices": ["billing", " billing "]
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("INVALID_WORKFLOW_STATE"));
     }
 }
