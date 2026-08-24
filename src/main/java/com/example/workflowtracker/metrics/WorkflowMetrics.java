@@ -12,6 +12,10 @@ public class WorkflowMetrics {
     private final Counter completed;
     private final Counter failed;
     private final Counter rejectedAcknowledgements;
+    private final Counter outboxClaimed;
+    private final Counter outboxPublished;
+    private final Counter outboxPublishFailed;
+    private final Counter outboxDeadLettered;
 
     public WorkflowMetrics(MeterRegistry meterRegistry) {
         created = Counter.builder("workflow.created")
@@ -29,6 +33,18 @@ public class WorkflowMetrics {
         rejectedAcknowledgements = Counter.builder("workflow.acknowledgement.rejected")
                 .description("Downstream acknowledgements rejected")
                 .register(meterRegistry);
+        outboxClaimed = Counter.builder("workflow.outbox.claimed")
+                .description("Outbox events claimed for publishing")
+                .register(meterRegistry);
+        outboxPublished = Counter.builder("workflow.outbox.published")
+                .description("Outbox events published to Kafka")
+                .register(meterRegistry);
+        outboxPublishFailed = Counter.builder("workflow.outbox.publish.failed")
+                .description("Outbox publish attempts that failed")
+                .register(meterRegistry);
+        outboxDeadLettered = Counter.builder("workflow.outbox.dead.lettered")
+                .description("Outbox events moved to dead letter state")
+                .register(meterRegistry);
     }
 
     public void recordCreated() { created.increment(); }
@@ -36,4 +52,8 @@ public class WorkflowMetrics {
     public void recordCompleted() { completed.increment(); }
     public void recordFailed() { failed.increment(); }
     public void recordRejectedAcknowledgement() { rejectedAcknowledgements.increment(); }
+    public void recordOutboxClaimed(int count) { outboxClaimed.increment(count); }
+    public void recordOutboxPublished() { outboxPublished.increment(); }
+    public void recordOutboxPublishFailed() { outboxPublishFailed.increment(); }
+    public void recordOutboxDeadLettered() { outboxDeadLettered.increment(); }
 }
