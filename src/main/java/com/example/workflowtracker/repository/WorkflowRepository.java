@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.List;
@@ -31,5 +32,6 @@ public interface WorkflowRepository extends JpaRepository<Workflow, UUID> {
     @EntityGraph(attributePaths = "acknowledgements")
     @Query("select w from Workflow w where w.status = :status and w.ackDeadline <= :now")
     List<Workflow> findOverdueForUpdate(@Param("status") WorkflowStatus status,
-                                        @Param("now") Instant now);
+                                        @Param("now") Instant now,
+                                        Pageable pageable);
 }

@@ -167,5 +167,6 @@ Without Docker, the application can still be run against any PostgreSQL instance
 - `eventId` is an upstream idempotency key and is globally unique.
 - Each target service acknowledges at most once. Acknowledgement calls are not intended to carry a result payload in this version.
 - The scheduler marks overdue workflows as failed; alert delivery can be added after the state update, preferably through an outbox table so an alert is not lost.
+- The scheduler processes at most `WORKFLOW_SCHEDULER_BATCH_SIZE` workflows per run, ordered by deadline and workflow ID. A larger deployment should add `SKIP LOCKED` or a lease so multiple scheduler instances can share work safely.
 - For a high-volume deployment, `GET /api/v1/workflows/pending` should be paginated and the overdue scan should process bounded batches with a lease or `SKIP LOCKED` strategy.
 - Authentication and authorization are intentionally outside this exercise. In production, upstream and downstream callers should use service identity and authorize which services may acknowledge which workflows.

@@ -13,6 +13,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,33 +32,39 @@ public class WorkflowService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final Duration acknowledgementTimeout;
+    private final int overdueBatchSize;
 
     public WorkflowService(WorkflowRepository workflowRepository,
                            OutboxRepository outboxRepository,
                            ObjectMapper objectMapper,
                            Clock clock,
-                           @Value("${workflow.acknowledgement-timeout:PT15M}") Duration acknowledgementTimeout) {
+                           @Value("${workflow.acknowledgement-timeout:PT15M}") Duration acknowledgementTimeout,
+                           @Value("${workflow.scheduler.batch-size:100}") int overdueBatchSize) {
         this.workflowRepository = workflowRepository;
         this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.acknowledgementTimeout = acknowledgementTimeout;
+        this.overdueBatchSize = overdueBatchSize;
     }
 
     @Transactional
     public WorkflowDtos.WorkflowResponse create(WorkflowDtos.CreateWorkflowRequest request) {
         Instant now = clock.instant();
-        List<String> services = request.targetServices().stream().distinct().toList();
-        if (services.size() != request.targetServices().size()) {
+        String eventId = request.eventId().trim();
+        List<String> services = request.targetServices().stream()
+                .map(String::trim)
+                .toList();
+        if (services.stream().distinct().count() != services.size()) {
             throw new WorkflowConflictException("targetServices must not contain duplicates");
         }
         JsonNode payload = request.payload() == null ? objectMapper.createObjectNode() : request.payload();
-        Workflow workflow = new Workflow(request.eventId(), payload, now,
+        Workflow workflow = new Workflow(eventId, payload, now,
                 now.plus(acknowledgementTimeout), services);
         try {
             return toResponse(workflowRepository.saveAndFlush(workflow));
         } catch (DataIntegrityViolationException ex) {
-            throw new WorkflowConflictException("eventId already exists: " + request.eventId());
+            throw new WorkflowConflictException("eventId already exists: " + eventId);
         }
     }
 
@@ -73,19 +81,20 @@ public class WorkflowService {
         if (workflow.isOverdue(clock.instant())) {
             throw new WorkflowConflictException("acknowledgement deadline has been exceeded");
         }
-        if (!workflow.hasExpectedService(request.serviceName())) {
+        String serviceName = request.serviceName().trim();
+        if (!workflow.hasExpectedService(serviceName)) {
             throw new WorkflowConflictException("service is not an expected acknowledgement target: "
-                    + request.serviceName());
+                    + serviceName);
         }
         WorkflowAcknowledgement acknowledgement = workflow.getAcknowledgements().stream()
-                .filter(ack -> ack.getServiceName().equals(request.serviceName()))
+                .filter(ack -> ack.getServiceName().equals(serviceName))
                 .findFirst()
                 .orElseThrow();
         if (acknowledgement.isAcknowledged()) {
             throw new WorkflowConflictException("duplicate acknowledgement from service: "
-                    + request.serviceName());
+                    + serviceName);
         }
-        workflow.markAcknowledged(request.serviceName(), clock.instant());
+        workflow.markAcknowledged(serviceName, clock.instant());
         if (workflow.getStatus() == WorkflowStatus.COMPLETED) {
             recordTerminalEvent(workflow, "WORKFLOW_COMPLETED");
         }
@@ -128,7 +137,11 @@ public class WorkflowService {
     @Transactional
     public int failOverdue() {
         Instant now = clock.instant();
-        List<Workflow> overdue = workflowRepository.findOverdueForUpdate(WorkflowStatus.PENDING, now);
+        List<Workflow> overdue = workflowRepository.findOverdueForUpdate(
+                WorkflowStatus.PENDING,
+                now,
+                PageRequest.of(0, overdueBatchSize,
+                        Sort.by(Sort.Order.asc("ackDeadline"), Sort.Order.asc("id"))));
         overdue.forEach(workflow -> {
             workflow.markFailed("Acknowledgement deadline exceeded", now);
             recordTerminalEvent(workflow, "WORKFLOW_FAILED");

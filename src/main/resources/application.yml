@@ -21,6 +21,7 @@ workflow:
   scheduler:
     enabled: ${WORKFLOW_SCHEDULER_ENABLED:true}
     fixed-delay-ms: ${WORKFLOW_SCHEDULER_FIXED_DELAY_MS:60000}
+    batch-size: ${WORKFLOW_SCHEDULER_BATCH_SIZE:100}
 
 server:
   shutdown: graceful
