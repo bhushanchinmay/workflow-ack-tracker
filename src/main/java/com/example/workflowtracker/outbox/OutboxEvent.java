@@ -6,6 +6,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -43,6 +45,19 @@ public class OutboxEvent {
     @Column(name = "last_error", length = 1000)
     private String lastError;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private OutboxStatus status;
+
+    @Column(name = "claimed_at")
+    private Instant claimedAt;
+
+    @Column(name = "claim_token")
+    private UUID claimToken;
+
+    @Column(name = "next_attempt_at", nullable = false)
+    private Instant nextAttemptAt;
+
     protected OutboxEvent() {
     }
 
@@ -52,6 +67,15 @@ public class OutboxEvent {
         this.eventType = eventType;
         this.payload = payload;
         this.createdAt = createdAt;
+        this.status = OutboxStatus.PENDING;
+        this.nextAttemptAt = createdAt;
+    }
+
+    public void claim(UUID token, Instant claimedAt) {
+        this.status = OutboxStatus.CLAIMED;
+        this.claimedAt = claimedAt;
+        this.claimToken = token;
+        this.attemptCount++;
     }
 
     public UUID getId() { return id; }
@@ -62,4 +86,8 @@ public class OutboxEvent {
     public Instant getPublishedAt() { return publishedAt; }
     public int getAttemptCount() { return attemptCount; }
     public String getLastError() { return lastError; }
+    public OutboxStatus getStatus() { return status; }
+    public Instant getClaimedAt() { return claimedAt; }
+    public UUID getClaimToken() { return claimToken; }
+    public Instant getNextAttemptAt() { return nextAttemptAt; }
 }
