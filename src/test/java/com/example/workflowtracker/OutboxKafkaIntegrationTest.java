@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -97,7 +98,7 @@ class OutboxKafkaIntegrationTest {
             consumer.subscribe(List.of(TOPIC));
             while (Instant.now().isBefore(deadline) && !completionPublished) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(250));
-                completionPublished = records.records(TOPIC).stream()
+                completionPublished = StreamSupport.stream(records.records(TOPIC).spliterator(), false)
                         .anyMatch(record -> record.key().equals(workflowId)
                                 && record.value().contains("WORKFLOW_COMPLETED"));
             }

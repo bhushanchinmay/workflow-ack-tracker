@@ -123,8 +123,12 @@ public class OutboxKafkaPublisher {
     }
 
     private String errorMessage(Exception exception) {
-        String message = exception.getMessage() == null
-                ? exception.getClass().getSimpleName() : exception.getMessage();
+        Throwable failure = exception;
+        while (failure.getCause() != null && failure.getCause() != failure) {
+            failure = failure.getCause();
+        }
+        String message = failure.getMessage() == null
+                ? failure.getClass().getSimpleName() : failure.getMessage();
         return message.length() <= MAX_ERROR_LENGTH
                 ? message : message.substring(0, MAX_ERROR_LENGTH);
     }
