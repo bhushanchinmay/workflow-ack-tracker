@@ -195,7 +195,7 @@ public class WorkflowService {
                 .filter(ack -> !ack.isAcknowledged())
                 .map(WorkflowAcknowledgement::getServiceName).toList();
         return new WorkflowDtos.WorkflowResponse(workflow.getId(), workflow.getEventId(),
-                objectMapper.convertValue(workflow.getPayload(), JsonNode.class), workflow.getStatus(),
+                workflow.getPayload(), workflow.getStatus(),
                 workflow.getFailureReason(), workflow.getCreatedAt(), workflow.getUpdatedAt(),
                 workflow.getAckDeadline(), acknowledgements, acknowledged, pending);
     }
