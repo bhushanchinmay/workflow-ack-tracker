@@ -2,11 +2,11 @@ package com.example.workflowtracker;
 
 import com.example.workflowtracker.domain.Workflow;
 import com.example.workflowtracker.domain.WorkflowStatus;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,7 +18,7 @@ class WorkflowDomainTest {
     void completesOnlyAfterEveryExpectedServiceAcknowledges() {
         Workflow workflow = new Workflow(
                 "order-1001",
-                Map.of("orderId", "1001"),
+                JsonNodeFactory.instance.objectNode().put("orderId", "1001"),
                 CREATED_AT,
                 CREATED_AT.plusSeconds(900),
                 List.of("billing", "shipping"));
@@ -36,7 +36,7 @@ class WorkflowDomainTest {
     void marksAnUnresolvedWorkflowAsFailed() {
         Workflow workflow = new Workflow(
                 "order-1002",
-                Map.of(),
+                JsonNodeFactory.instance.objectNode(),
                 CREATED_AT,
                 CREATED_AT.plusSeconds(900),
                 List.of("billing"));

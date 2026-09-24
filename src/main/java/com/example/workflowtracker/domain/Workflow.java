@@ -1,5 +1,6 @@
 package com.example.workflowtracker.domain;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -37,7 +38,7 @@ public class Workflow {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
-    private Object payload;
+    private JsonNode payload;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -67,7 +68,7 @@ public class Workflow {
     protected Workflow() {
     }
 
-    public Workflow(String eventId, Object payload, Instant createdAt, Instant ackDeadline,
+    public Workflow(String eventId, JsonNode payload, Instant createdAt, Instant ackDeadline,
                     List<String> targetServices) {
         this.eventId = eventId;
         this.payload = payload;
@@ -116,7 +117,7 @@ public class Workflow {
 
     public UUID getId() { return id; }
     public String getEventId() { return eventId; }
-    public Object getPayload() { return payload; }
+    public JsonNode getPayload() { return payload; }
     public WorkflowStatus getStatus() { return status; }
     public String getFailureReason() { return failureReason; }
     public Instant getCreatedAt() { return createdAt; }
