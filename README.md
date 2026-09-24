@@ -121,7 +121,7 @@ PostgreSQL and Kafka integration tests use Testcontainers:
 mvn verify -Pintegration
 ```
 
-GitHub Actions runs both suites on every pull request and on pushes to `master` (see `.github/workflows/ci.yml`).
+GitHub Actions runs both suites and builds the Docker image on every pull request and on pushes to `master` (see `.github/workflows/ci.yml`).
 
 ## Observability
 
